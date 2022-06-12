@@ -1,9 +1,26 @@
 const User = require("../models/user");
 
-module.exports.profile = function (req, res) {
+module.exports.profile = async function (req, res) {
+  const user = await User.findById(req.params.id);
+
   return res.render("user_profile", {
     title: "User Profile",
+    profile_user: user,
   });
+};
+
+module.exports.update = function (req, res) {
+  if (req.user.id == req.params.id) {
+    User.findByIdAndUpdate(req.params.id, req.body, function (err, user) {
+      if (err) {
+        console.log("Error ", err);
+        return res.redirect("back");
+      }
+      return res.redirect("back");
+    });
+  } else {
+    return res.redirect("back");
+  }
 };
 
 // render the sign up page
@@ -30,6 +47,7 @@ module.exports.signIn = function (req, res) {
 // get the sign up data
 module.exports.create = function (req, res) {
   if (req.body.password != req.body.confirm_password) {
+    req.flash('error','Password And Confirm Password Do not Match')
     return res.redirect("back");
   }
 
@@ -42,10 +60,12 @@ module.exports.create = function (req, res) {
     if (!user) {
       User.create(req.body, function (err, user) {
         if (err) {
+          req.flash('error',err);
           console.log("error in creating user while signing up");
           return;
         }
-
+        
+        req.flash('success','Sign Up Success');
         return res.redirect("/users/sign-in");
       });
     } else {
@@ -56,6 +76,7 @@ module.exports.create = function (req, res) {
 
 // sign in and create a session for the user
 module.exports.createSession = function (req, res) {
+  req.flash("success", "Logged in Successfully");
   return res.redirect("/");
 };
 
@@ -64,7 +85,9 @@ module.exports.destroySession = function (req, res) {
     if (err) {
       console.log("Error");
     }
+    res.redirect("/");
   });
+  req.flash("success", "Logged Out Successfully");
 
   return res.redirect("/");
 };
