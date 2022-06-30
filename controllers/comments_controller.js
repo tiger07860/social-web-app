@@ -3,10 +3,10 @@ const Post = require("../models/post");
 
 module.exports.create = async function (req, res) {
   try {
-    const post = await Post.findById(req.body.post);
+    let post = await Post.findById(req.body.post);
 
     if (post) {
-      const comment = await Comment.create({
+      let comment = await Comment.create({
         content: req.body.content,
         post: req.body.post,
         user: req.user._id,
@@ -15,50 +15,62 @@ module.exports.create = async function (req, res) {
       post.comments.push(comment);
       post.save();
 
+      console.log("In");
+      comment = await comment.populate("user", "email");
+      console.log("Out");
+      commentsMailer.newComment(comment);
+
       if (req.xhr) {
         return res.status(200).json({
           data: {
             comment: comment,
           },
-          message: "Comment Created!!",
+          message: "Comment created!",
         });
       }
 
-      req.flash("success", "Comment published!!");
+      req.flash("success", "Comment published!");
 
-      return res.redirect("/");
+      res.redirect("/");
     }
   } catch (err) {
     req.flash("error", err);
-    return res.redirect("/");
+    return;
   }
 };
 
 module.exports.delete = async function (req, res) {
   try {
-    const comment = await Comment.findById(req.params.id);
+    let comment = await Comment.findById(req.params.id);
 
     if (comment.user == req.user.id) {
       let postId = comment.post;
+
       comment.remove();
 
-      const post = await Post.findByIdAndUpdate(postId, {
+      let post = Post.findByIdAndUpdate(postId, {
         $pull: { comments: req.params.id },
       });
 
+      // send the comment id which was deleted back to the views
       if (req.xhr) {
         return res.status(200).json({
           data: {
             comment_id: req.params.id,
           },
-          message: "Comment deleted",
+          message: "Post deleted",
         });
       }
+
+      req.flash("success", "Comment deleted!");
+
+      return res.redirect("back");
+    } else {
+      req.flash("error", "Unauthorized");
+      return res.redirect("back");
     }
-    req.flash("success", "Comments deleted!");
-    return res.redirect("back");
   } catch (err) {
     req.flash("error", err);
-    return res.redirect("back");
+    return;
   }
 };

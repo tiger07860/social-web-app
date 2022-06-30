@@ -1,4 +1,6 @@
 const User = require("../models/user");
+const fs = require("fs");
+const path = require("path");
 
 module.exports.profile = async function (req, res) {
   const user = await User.findById(req.params.id);
@@ -9,17 +11,40 @@ module.exports.profile = async function (req, res) {
   });
 };
 
-module.exports.update = function (req, res) {
+// Updating Users profile
+module.exports.update = async function (req, res) {
   if (req.user.id == req.params.id) {
-    User.findByIdAndUpdate(req.params.id, req.body, function (err, user) {
-      if (err) {
-        console.log("Error ", err);
+    try {
+      let user = await User.findById(req.params.id);
+      User.uploadedAvatar(req, res, function (err) {
+        if (err) {
+          console.log("*****Multer Error: ", err);
+        }
+
+        user.name = req.body.name;
+        user.email = req.body.email;
+
+        if (req.file) {
+          // Users Avatar Already Present
+          if (user.avatar) {
+            //Deleting Already Present Avatar
+            fs.unlinkSync(path.join(__dirname, "..", user.avatar));
+          }
+
+          // This is saving the path of the uploaded file into the avatar field in the user
+          user.avatar = User.avatarPath + "/" + req.file.filename;
+        }
+        user.save();
         return res.redirect("back");
-      }
+      });
+    } catch (err) {
+      req.flash("error", err);
       return res.redirect("back");
-    });
+    }
   } else {
-    return res.redirect("back");
+    req.flash("error", "Unauthorized!");
+    return res.status(401).send("Unauthorized");
+    ("");
   }
 };
 
@@ -47,7 +72,7 @@ module.exports.signIn = function (req, res) {
 // get the sign up data
 module.exports.create = function (req, res) {
   if (req.body.password != req.body.confirm_password) {
-    req.flash('error','Password And Confirm Password Do not Match')
+    req.flash("error", "Password And Confirm Password Do not Match");
     return res.redirect("back");
   }
 
@@ -60,12 +85,12 @@ module.exports.create = function (req, res) {
     if (!user) {
       User.create(req.body, function (err, user) {
         if (err) {
-          req.flash('error',err);
+          req.flash("error", err);
           console.log("error in creating user while signing up");
           return;
         }
-        
-        req.flash('success','Sign Up Success');
+
+        req.flash("success", "Sign Up Success");
         return res.redirect("/users/sign-in");
       });
     } else {

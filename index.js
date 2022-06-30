@@ -8,10 +8,13 @@ const db = require("./config/mongoose");
 const session = require("express-session");
 const passport = require("passport");
 const passportLocal = require("./config/passport-local-strategy");
+const passportJWT = require("./config/passport-jwt-strategy");
+const passportgoogle = require("./config/passport-google-oauth-strategy");
 // const MongoStore = require("connect-mongo")(session);
 const sassMiddleware = require("node-sass-middleware");
 const flash = require("connect-flash");
 const customMware = require("./config/customMware");
+
 
 app.use(
   sassMiddleware({
@@ -26,7 +29,7 @@ app.use(express.urlencoded());
 
 app.use(cookieParser());
 
-app.use(express.static("./assets"));
+app.use(express.static('./assets'));
 
 app.use(expressLayouts);
 // extract style and scripts from sub pages into the layout
@@ -72,6 +75,9 @@ app.use(customMware.setFlash);
 
 // use express router
 app.use("/", require("./routes"));
+
+//Make Upload Path Available to Browser
+app.use("/uploads", express.static(__dirname + "/uploads"));
 
 app.listen(port, function (err) {
   if (err) {
